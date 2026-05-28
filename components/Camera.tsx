@@ -11,31 +11,37 @@ export const Camera = ({ onDetection }: { onDetection: (result: any) => void }) 
   useEffect(() => {
     modelLoader.loadModel().then(() => {
       setRobotListo(true);
+      console.log("[ROBOT] Sistema listo");
     });
   }, []);
 
   const tomarFotoYPreguntar = async () => {
     if (!robotListo || analizando) return;
+    
     setAnalizando(true);
+    
     try {
       const foto = webcamRef.current?.getScreenshot();
       if (!foto) return;
+      
       const img = new Image();
       img.src = foto;
       await new Promise((resolve) => { img.onload = resolve; });
+      
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0);
       const imageData = ctx?.getImageData(0, 0, img.width, img.height);
+      
       if (imageData) {
         const resultado = await modelLoader.predict(imageData);
         setUltimoResultado(resultado);
         onDetection(resultado);
       }
     } catch (error) {
-      console.error(error);
+      console.error("[ROBOT] Error:", error);
     } finally {
       setAnalizando(false);
     }
@@ -52,14 +58,25 @@ export const Camera = ({ onDetection }: { onDetection: (result: any) => void }) 
       <div className="relative rounded-xl overflow-hidden" style={{ background: '#0A0F0D' }}>
         <Webcam
           ref={webcamRef}
+          audio={false}
           screenshotFormat="image/jpeg"
           className="w-full rounded-xl"
-          videoConstraints={{ width: 640, height: 480, facingMode: "environment" }}
+          videoConstraints={{
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: "environment",
+            aspectRatio: 1.3333333333
+          }}
+          style={{ 
+            filter: 'none',
+            WebkitFilter: 'none',
+            MozFilter: 'none'
+          }}
         />
         
-        {/* Efecto de escaneo sutil */}
+        {/* Líneas de escaneo */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: 'repeating-linear-gradient(0deg, rgba(0, 255, 136, 0.03) 0px, rgba(0, 255, 136, 0.03) 2px, transparent 2px, transparent 8px)'
+          background: 'repeating-linear-gradient(0deg, rgba(0, 255, 136, 0.05) 0px, rgba(0, 255, 136, 0.05) 2px, transparent 2px, transparent 8px)'
         }} />
         
         {/* Bounding Box cuando detecta planta */}
@@ -92,10 +109,11 @@ export const Camera = ({ onDetection }: { onDetection: (result: any) => void }) 
       </div>
       
       {!robotListo && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(5, 10, 7, 0.9)' }}>
+        <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(5, 10, 7, 0.95)' }}>
           <div className="text-center">
-            <div className="w-8 h-8 rounded-full animate-spin border-2 mx-auto mb-2" style={{ borderColor: '#00FF88', borderTopColor: 'transparent' }}></div>
-            <span className="text-xs" style={{ color: '#00FF88' }}>Cargando modelo...</span>
+            <div className="w-10 h-10 rounded-full animate-spin border-2 mx-auto mb-2" style={{ borderColor: '#00FF88', borderTopColor: 'transparent' }}></div>
+            <div className="text-xs font-mono" style={{ color: '#00FF88' }}>Cargando modelo...</div>
+            <div className="text-xs mt-2" style={{ color: '#8899AA' }}>Descargando IA ~42MB</div>
           </div>
         </div>
       )}
